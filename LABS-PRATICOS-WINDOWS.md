@@ -595,3 +595,66 @@ Entregáveis: diagrama, decisões de tech, custo, failover, backup (RTO/RPO). Ru
 **Preparado por:** Prof. Daniel Lemeszenski  
 **Data:** 27 Fevereiro 2026  
 **Para:** MBA FIAP Encontros 1-3 — versão Windows, sem Python, direto no MD.
+
+---
+
+## Limpeza do Ambiente (Reset Rápido)
+
+Use esta seção ao finalizar os labs ou quando aparecer erro do tipo:
+
+`[ERR] Node redis-node-X:6379 is not empty`
+
+### Opção 1: Limpeza completa (recomendado)
+
+Parar e remover containers usados nos labs:
+
+```powershell
+docker rm -f redis-node-0 redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5 redis-master redis-slave redis-rdb redis-aof redis-search redis-ts
+```
+
+Remover volumes do cluster (apaga estado persistido dos nós):
+
+```powershell
+docker volume rm redis-data-0 redis-data-1 redis-data-2 redis-data-3 redis-data-4 redis-data-5
+```
+
+Limpeza geral de recursos Docker não utilizados (opcional):
+
+```powershell
+docker system prune -f
+```
+
+### Opção 2: Reset de cluster sem apagar tudo
+
+Se os 6 nodes ainda estiverem rodando, execute em cada node:
+
+```powershell
+docker exec redis-node-0 redis-cli FLUSHALL
+docker exec redis-node-0 redis-cli CLUSTER RESET HARD
+docker exec redis-node-1 redis-cli FLUSHALL
+docker exec redis-node-1 redis-cli CLUSTER RESET HARD
+docker exec redis-node-2 redis-cli FLUSHALL
+docker exec redis-node-2 redis-cli CLUSTER RESET HARD
+docker exec redis-node-3 redis-cli FLUSHALL
+docker exec redis-node-3 redis-cli CLUSTER RESET HARD
+docker exec redis-node-4 redis-cli FLUSHALL
+docker exec redis-node-4 redis-cli CLUSTER RESET HARD
+docker exec redis-node-5 redis-cli FLUSHALL
+docker exec redis-node-5 redis-cli CLUSTER RESET HARD
+```
+
+Depois recrie o cluster com:
+
+```powershell
+docker exec redis-node-0 redis-cli --cluster create 127.0.0.1:6379 127.0.0.1:6380 127.0.0.1:6381 127.0.0.1:6382 127.0.0.1:6383 127.0.0.1:6384 --cluster-replicas 1
+```
+
+### Verificação rápida
+
+```powershell
+docker ps | findstr redis
+```
+
+```powershell
+redis-cli -p 6379 cluster info
+```
