@@ -4,6 +4,98 @@ Comandos quebrados por linha para rodar no **PowerShell** ou **CMD** do Windows.
 
 ---
 
+## SEÇÃO 0: Limpeza + Cluster do Zero (Windows)
+
+Use esta seção antes do Lab 1 para evitar erros como:
+
+`[ERR] Node redis-node-X:6379 is not empty`
+
+ou
+
+`Could not connect to Redis at 127.0.0.1:6380`
+
+### 0.1 Limpeza completa do ambiente
+
+Parar/remover containers dos labs (ignore mensagem de "No such container"):
+
+```powershell
+docker rm -f redis-node-0 redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5 redis-master redis-slave redis-rdb redis-aof redis-search redis-ts
+```
+
+Remover volumes antigos do cluster (se existirem):
+
+```powershell
+docker volume rm redis-data-0 redis-data-1 redis-data-2 redis-data-3 redis-data-4 redis-data-5
+```
+
+Remover/recriar rede dedicada do cluster:
+
+```powershell
+docker network rm redis-cluster
+```
+
+```powershell
+docker network create redis-cluster
+```
+
+### 0.2 Subir os 6 nós na rede correta
+
+```powershell
+docker pull redis:7.0-alpine
+```
+
+```powershell
+docker run -d --name redis-node-0 --network redis-cluster -p 6379:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-0.conf --port 6379
+```
+
+```powershell
+docker run -d --name redis-node-1 --network redis-cluster -p 6380:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-1.conf --port 6379
+```
+
+```powershell
+docker run -d --name redis-node-2 --network redis-cluster -p 6381:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-2.conf --port 6379
+```
+
+```powershell
+docker run -d --name redis-node-3 --network redis-cluster -p 6382:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-3.conf --port 6379
+```
+
+```powershell
+docker run -d --name redis-node-4 --network redis-cluster -p 6383:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-4.conf --port 6379
+```
+
+```powershell
+docker run -d --name redis-node-5 --network redis-cluster -p 6384:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-5.conf --port 6379
+```
+
+Verificar:
+
+```powershell
+docker ps | findstr redis-node
+```
+
+### 0.3 Criar cluster (comando correto)
+
+Execute no host (PowerShell/CMD):
+
+```powershell
+docker exec redis-node-0 redis-cli --cluster create redis-node-0:6379 redis-node-1:6379 redis-node-2:6379 redis-node-3:6379 redis-node-4:6379 redis-node-5:6379 --cluster-replicas 1
+```
+
+Quando pedir confirmação, digite `yes`.
+
+### 0.4 Validar
+
+```powershell
+docker exec redis-node-0 redis-cli cluster info
+```
+
+```powershell
+docker exec redis-node-0 redis-cli cluster nodes
+```
+
+---
+
 ## ENCONTRO 1: Labs 1-3
 
 ### Lab 1: Configurar Redis Cluster 6-Node
@@ -25,27 +117,27 @@ docker pull redis:7.0-alpine
 Criar cada node (rode um comando por vez):
 
 ```powershell
-docker run -d --name redis-node-0 -p 6379:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-0.conf --port 6379
+docker run -d --name redis-node-0 --network redis-cluster -p 6379:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-0.conf --port 6379
 ```
 
 ```powershell
-docker run -d --name redis-node-1 -p 6380:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-1.conf --port 6379
+docker run -d --name redis-node-1 --network redis-cluster -p 6380:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-1.conf --port 6379
 ```
 
 ```powershell
-docker run -d --name redis-node-2 -p 6381:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-2.conf --port 6379
+docker run -d --name redis-node-2 --network redis-cluster -p 6381:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-2.conf --port 6379
 ```
 
 ```powershell
-docker run -d --name redis-node-3 -p 6382:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-3.conf --port 6379
+docker run -d --name redis-node-3 --network redis-cluster -p 6382:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-3.conf --port 6379
 ```
 
 ```powershell
-docker run -d --name redis-node-4 -p 6383:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-4.conf --port 6379
+docker run -d --name redis-node-4 --network redis-cluster -p 6383:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-4.conf --port 6379
 ```
 
 ```powershell
-docker run -d --name redis-node-5 -p 6384:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-5.conf --port 6379
+docker run -d --name redis-node-5 --network redis-cluster -p 6384:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-5.conf --port 6379
 ```
 
 Verificar (deve listar 6 nodes):
@@ -61,7 +153,7 @@ docker ps | findstr redis-node
 Um único comando (responda **yes** quando pedir confirmação):
 
 ```powershell
-docker exec redis-node-0 redis-cli --cluster create 127.0.0.1:6379 127.0.0.1:6380 127.0.0.1:6381 127.0.0.1:6382 127.0.0.1:6383 127.0.0.1:6384 --cluster-replicas 1
+docker exec redis-node-0 redis-cli --cluster create redis-node-0:6379 redis-node-1:6379 redis-node-2:6379 redis-node-3:6379 redis-node-4:6379 redis-node-5:6379 --cluster-replicas 1
 ```
 
 ---
