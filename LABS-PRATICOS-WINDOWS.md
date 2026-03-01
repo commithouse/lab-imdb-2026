@@ -135,23 +135,55 @@ SET key2 "Redis slot 5461"
 GET key1
 ```
 
-Sair do redis-cli (digite `exit`). Parar node 0:
+Sair do redis-cli (digite `exit`).
+
+### Teste de Failover — Parar Master (Node 0)
+
+Verificar qual node é master dos slots (antes de parar):
+
+```powershell
+redis-cli -p 6379 cluster nodes | findstr master
+```
+
+**Cenário:** Você está conectado ao node 0 (master). Vamos parar ele e ver se outro node assume automaticamente.
+
+Parar node 0:
 
 ```powershell
 docker stop redis-node-0
 ```
 
-Aguardar 5 segundos:
+Tentar conectar novamente (conecta a outro node que agora é master):
 
 ```powershell
-Start-Sleep -Seconds 5
+redis-cli -c -p 6380
 ```
 
-Tentar conectar de novo (esperado: outro node assumiu):
+Dentro do redis-cli, recuperar os dados (devem estar lá!):
 
-```powershell
-redis-cli -c -p 6379
 ```
+GET key1
+```
+
+```
+GET key2
+```
+
+Ver novo cluster status (agora sem node 0):
+
+```
+CLUSTER NODES
+```
+
+Ver se slots foram redistribuídos:
+
+```
+CLUSTER SLOTS
+```
+
+Sair do redis-cli (`exit`).
+
+### Recuperação — Reiniciar Node 0
 
 Reiniciar node 0:
 
@@ -159,11 +191,35 @@ Reiniciar node 0:
 docker start redis-node-0
 ```
 
-Ver status do cluster:
+Conectar novamente (agora volta a estar no pool):
 
 ```powershell
-redis-cli -p 6379 cluster info
+redis-cli -c -p 6379
 ```
+
+Conferir dados ainda existem:
+
+```
+GET key1
+```
+
+Ver cluster estabilizado (6 nodes novamente):
+
+```
+CLUSTER INFO
+```
+
+```
+CLUSTER NODES
+```
+
+Contar quantos masters e quantos slaves:
+
+```
+CLUSTER NODES | grep master | wc -l
+```
+
+Esperado: 3 masters e 3 slaves.
 
 ---
 
