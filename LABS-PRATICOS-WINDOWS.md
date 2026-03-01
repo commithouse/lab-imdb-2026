@@ -14,8 +14,6 @@ ou
 
 `Could not connect to Redis at 127.0.0.1:6380`
 
-### 0.1 Limpeza completa do ambiente
-
 Parar/remover containers dos labs (ignore mensagem de "No such container"):
 
 ```powershell
@@ -37,8 +35,15 @@ docker network rm redis-cluster
 ```powershell
 docker network create redis-cluster
 ```
+---
 
-### 0.2 Subir os 6 nós na rede correta
+## ENCONTRO 1: Labs 1-3
+
+### Lab 1: Configurar Redis Cluster 6-Node
+
+**Objetivo:** Montar cluster com failover automático  
+**Tempo:** 45 minutos  
+**Pré-requisitos:** Docker instalado, `redis-cli`, 6 portas (6379-6384)
 
 ```powershell
 docker pull redis:7.0-alpine
@@ -74,7 +79,7 @@ Verificar:
 docker ps | findstr redis-node
 ```
 
-### 0.3 Criar cluster (em 2 comandos)
+### Criar cluster (em 2 comandos)
 
 Comando 1 (no host, PowerShell/CMD) — entrar no node 0 em modo interativo:
 
@@ -90,7 +95,7 @@ redis-cli --cluster create redis-node-0:6379 redis-node-1:6379 redis-node-2:6379
 
 Quando pedir confirmação, digite `yes`.
 
-### 0.4 Validar
+### Validar
 
 ```powershell
 docker exec redis-node-0 redis-cli cluster info
@@ -102,29 +107,7 @@ docker exec redis-node-0 redis-cli cluster nodes
 
 ---
 
-## ENCONTRO 1: Labs 1-3
-
-### Lab 1: Configurar Redis Cluster 6-Node
-
-**Objetivo:** Montar cluster com failover automático  
-**Tempo:** 45 minutos  
-**Pré-requisitos:** Docker instalado, `redis-cli`, 6 portas (6379-6384)
-
----
-
-**Passo 1: Criar 6 containers Redis**
-
-Para evitar repetição e inconsistência, execute exatamente a **SEÇÃO 0.2** deste documento.
-
----
-
-**Passo 2: Criar Cluster**
-
-Para evitar repetição e inconsistência, execute exatamente a **SEÇÃO 0.3** deste documento.
-
----
-
-**Passo 3: Testar Cluster**
+**Passo 2: Testar Cluster**
 
 Conectar ao node 0:
 
