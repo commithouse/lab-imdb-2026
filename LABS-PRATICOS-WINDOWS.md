@@ -112,7 +112,7 @@ docker exec redis-node-0 redis-cli cluster nodes
 Conectar ao node 0:
 
 ```powershell
-redis-cli -p 6379
+redis-cli -c -p 6379
 ```
 
 Dentro do `redis-cli`, ver slots:
@@ -150,7 +150,7 @@ Start-Sleep -Seconds 5
 Tentar conectar de novo (esperado: outro node assumiu):
 
 ```powershell
-redis-cli -p 6379
+redis-cli -c -p 6379
 ```
 
 Reiniciar node 0:
