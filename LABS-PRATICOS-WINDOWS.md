@@ -114,61 +114,13 @@ docker exec redis-node-0 redis-cli cluster nodes
 
 **Passo 1: Criar 6 containers Redis**
 
-Baixar imagem:
-
-```powershell
-docker pull redis:7.0-alpine
-```
-
-Criar cada node (rode um comando por vez):
-
-```powershell
-docker run -d --name redis-node-0 --network redis-cluster -p 6379:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-0.conf --port 6379
-```
-
-```powershell
-docker run -d --name redis-node-1 --network redis-cluster -p 6380:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-1.conf --port 6379
-```
-
-```powershell
-docker run -d --name redis-node-2 --network redis-cluster -p 6381:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-2.conf --port 6379
-```
-
-```powershell
-docker run -d --name redis-node-3 --network redis-cluster -p 6382:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-3.conf --port 6379
-```
-
-```powershell
-docker run -d --name redis-node-4 --network redis-cluster -p 6383:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-4.conf --port 6379
-```
-
-```powershell
-docker run -d --name redis-node-5 --network redis-cluster -p 6384:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-5.conf --port 6379
-```
-
-Verificar (deve listar 6 nodes):
-
-```powershell
-docker ps | findstr redis-node
-```
+Para evitar repetição e inconsistência, execute exatamente a **SEÇÃO 0.2** deste documento.
 
 ---
 
 **Passo 2: Criar Cluster**
 
-Em 2 comandos (responda **yes** quando pedir confirmação):
-
-Comando 1 (no host):
-
-```powershell
-docker exec -it redis-node-0 sh
-```
-
-Comando 2 (dentro do container):
-
-```bash
-redis-cli --cluster create redis-node-0:6379 redis-node-1:6379 redis-node-2:6379 redis-node-3:6379 redis-node-4:6379 redis-node-5:6379 --cluster-replicas 1
-```
+Para evitar repetição e inconsistência, execute exatamente a **SEÇÃO 0.3** deste documento.
 
 ---
 
@@ -749,15 +701,7 @@ docker exec redis-node-5 redis-cli FLUSHALL
 docker exec redis-node-5 redis-cli CLUSTER RESET HARD
 ```
 
-Depois recrie o cluster com:
-
-```powershell
-docker exec -it redis-node-0 sh
-```
-
-```bash
-redis-cli --cluster create redis-node-0:6379 redis-node-1:6379 redis-node-2:6379 redis-node-3:6379 redis-node-4:6379 redis-node-5:6379 --cluster-replicas 1
-```
+Depois recrie o cluster seguindo a **SEÇÃO 0.3** deste documento.
 
 ### Verificação rápida
 
