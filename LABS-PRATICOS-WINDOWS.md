@@ -4,6 +4,70 @@ Comandos quebrados por linha para rodar no **PowerShell** ou **CMD** do Windows.
 
 ---
 
+## ⚙️ SETUP INICIAL: Instalar Redis-CLI no Windows
+
+### Opção 1: Chocolatey (recomendado)
+
+Se você tem Chocolatey instalado, abra PowerShell **como Admin** e rode:
+
+```powershell
+choco install redis-cli -y
+```
+
+Verificar instalação:
+
+```powershell
+redis-cli --version
+```
+
+---
+
+### Opção 2: Scoop (alternativa)
+
+Se você tem Scoop:
+
+```powershell
+scoop install redis
+```
+
+---
+
+### Opção 3: Baixar do GitHub (manual)
+
+1. Acesse: https://github.com/microsoftarchive/redis/releases
+2. Baixe `Redis-x64-X.X.X.zip` (versão mais recente)
+3. Extraia em `C:\redis` (ou qualquer pasta)
+4. Adicione `C:\redis` ao `PATH` do Windows:
+   - Pressione `Win + X`, escolha "System"
+   - "Advanced system settings" → "Environment Variables"
+   - Clique em "Path" → "Edit"
+   - Clique "New" e adicione `C:\redis`
+   - Clique "OK" em tudo
+
+Verificar no PowerShell:
+
+```powershell
+redis-cli --version
+```
+
+---
+
+### Opção 4: Usar do Docker (sem instalar localmente)
+
+Se quiser evitar instalar no Windows, use alias no PowerShell:
+
+```powershell
+function redis-cli { docker run --rm -it --network redis-cluster redis:7.0-alpine redis-cli -h $args[0] -p $args[1] }
+```
+
+(Menos prático para este lab, mas funciona)
+
+---
+
+**Próximo passo:** Voltar ao Lab 1 e rodar todos os comandos do PowerShell.
+
+---
+
 ## SEÇÃO 0: Limpeza + Cluster do Zero (Windows)
 
 Use esta seção antes do Lab 1 para evitar erros como:
@@ -35,6 +99,7 @@ docker network rm redis-cluster
 ```powershell
 docker network create redis-cluster
 ```
+
 ---
 
 ## ENCONTRO 1: Labs 1-3
@@ -44,6 +109,8 @@ docker network create redis-cluster
 **Objetivo:** Montar cluster com failover automático  
 **Tempo:** 45 minutos  
 **Pré-requisitos:** Docker instalado, `redis-cli`, 6 portas (6379-6384)
+
+#### Passo 1: Subir 6 Nodes
 
 ```powershell
 docker pull redis:7.0-alpine
@@ -73,43 +140,45 @@ docker run -d --name redis-node-4 --network redis-cluster -p 6383:6379 redis:7.0
 docker run -d --name redis-node-5 --network redis-cluster -p 6384:6379 redis:7.0-alpine redis-server --cluster-enabled yes --cluster-config-file nodes-5.conf --port 6379
 ```
 
-Verificar:
+Verificar se os 6 nodes estão rodando:
 
 ```powershell
 docker ps | findstr redis-node
 ```
 
-### Criar cluster (em 2 comandos)
+---
 
-Comando 1 (no host, PowerShell/CMD) — entrar no node 0 em modo interativo:
+#### Passo 2: Criar Cluster (do Host)
+
+No PowerShell/CMD (ainda no host, NÃO entre no container):
 
 ```powershell
-docker exec -it redis-node-0 sh
-```
-
-Comando 2 (já dentro do container, no prompt `/data #`) — criar o cluster:
-
-```bash
-redis-cli --cluster create redis-node-0:6379 redis-node-1:6379 redis-node-2:6379 redis-node-3:6379 redis-node-4:6379 redis-node-5:6379 --cluster-replicas 1
+redis-cli --cluster create 127.0.0.1:6379 127.0.0.1:6380 127.0.0.1:6381 127.0.0.1:6382 127.0.0.1:6383 127.0.0.1:6384 --cluster-replicas 1
 ```
 
 Quando pedir confirmação, digite `yes`.
 
-### Validar
+---
+
+#### Passo 3: Validar Cluster
+
+Ver status (do host):
 
 ```powershell
-docker exec redis-node-0 redis-cli cluster info
+redis-cli -p 6379 cluster info
 ```
 
+Ver todos os nodes (do host):
+
 ```powershell
-docker exec redis-node-0 redis-cli cluster nodes
+redis-cli -p 6379 cluster nodes
 ```
 
 ---
 
-**Passo 2: Testar Cluster**
+#### Passo 4: Testar Cluster — Adicionar Dados
 
-Conectar ao node 0:
+Conectar ao node 0 (do host):
 
 ```powershell
 redis-cli -c -p 6379
@@ -135,17 +204,25 @@ SET key2 "Redis slot 5461"
 GET key1
 ```
 
-Sair do redis-cli (digite `exit`).
+Sair do redis-cli:
 
-### Teste de Failover — Parar Master (Node 0)
-
-Verificar qual node é master dos slots (antes de parar):
-
-```powershell
-redis-cli -p 6379 cluster nodes | findstr master
+```
+exit
 ```
 
-**Cenário:** Você está conectado ao node 0 (master). Vamos parar ele e ver se outro node assume automaticamente.
+---
+
+#### Passo 5: Teste de Failover — Parar Master (Node 0)
+
+Ver qual node é master (do host, antes de parar):
+
+```powershell
+redis-cli -p 6379 cluster nodes
+```
+
+Procure por uma linha com `master` — essa é o master dos slots.
+
+**Cenário:** Parar o node 0 (que é master) e ver se outro node assume automaticamente.
 
 Parar node 0:
 
@@ -153,7 +230,7 @@ Parar node 0:
 docker stop redis-node-0
 ```
 
-Tentar conectar novamente (conecta a outro node que agora é master):
+Tentar conectar ao node 1 (port 6380) — que agora é master:
 
 ```powershell
 redis-cli -c -p 6380
@@ -172,26 +249,38 @@ GET key2
 Ver novo cluster status (agora sem node 0):
 
 ```
+CLUSTER INFO
+```
+
+Ver slots foram redistribuídos:
+
+```
 CLUSTER NODES
 ```
 
-Ver se slots foram redistribuídos:
+Contar quantos masters agora (esperado: 2 masters e 4 slaves):
 
 ```
-CLUSTER SLOTS
+CLUSTER NODES | grep master | wc -l
 ```
 
-Sair do redis-cli (`exit`).
+Sair do redis-cli:
 
-### Recuperação — Reiniciar Node 0
+```
+exit
+```
 
-Reiniciar node 0:
+---
+
+#### Passo 6: Recuperação — Reiniciar Node 0
+
+Reiniciar node 0 (do host):
 
 ```powershell
 docker start redis-node-0
 ```
 
-Conectar novamente (agora volta a estar no pool):
+Conectar novamente ao node 0 (volta ao cluster):
 
 ```powershell
 redis-cli -c -p 6379
@@ -203,27 +292,27 @@ Conferir dados ainda existem:
 GET key1
 ```
 
-Ver cluster estabilizado (6 nodes novamente):
+Ver cluster voltou ao normal (6 nodes, 3 masters + 3 slaves):
 
 ```
 CLUSTER INFO
 ```
 
-```
-CLUSTER NODES
-```
-
-Contar quantos masters e quantos slaves:
+Contar masters novamente (esperado: 3):
 
 ```
-CLUSTER NODES | grep master | wc -l
+CLUSTER NODES | grep -c master
 ```
 
-Esperado: 3 masters e 3 slaves.
+Sair do redis-cli:
+
+```
+exit
+```
 
 ---
 
-**Checkpoints:** 6 nodes em execução | Cluster 3 masters + 3 slaves | SET/GET distribuído | Failover OK | Slave promovido
+**Checkpoints:** 6 nodes em execução ✅ | Cluster 3 masters + 3 slaves ✅ | SET/GET distribuído ✅ | Failover OK ✅ | Slave promovido ✅
 
 ---
 
@@ -246,11 +335,7 @@ docker run -d --name redis-master -p 7000:6379 redis:7.0-alpine redis-server
 docker run -d --name redis-slave -p 7001:6379 redis:7.0-alpine redis-server --slaveof redis-master 6379
 ```
 
-Aguardar 2 segundos:
-
-```powershell
-Start-Sleep -Seconds 2
-```
+Aguardar um momento para replicação iniciar.
 
 Verificar replicação (master):
 
@@ -427,7 +512,7 @@ docker exec redis-aof head -20 /data/appendonly.aof
 
 ### Lab 4: Full-Text Search (RediSearch)
 
-**Objetivo:** Índice de bicicletas, buscas &lt;100ms  
+**Objetivo:** Índice de bicicletas, buscas <100ms  
 **Tempo:** 40 minutos
 
 ---
@@ -490,7 +575,7 @@ Busca simples (Carbon):
 FT.SEARCH bikes:idx "Carbon"
 ```
 
-Carbon com preço &lt; 2000:
+Carbon com preço < 2000:
 
 ```redis
 FT.SEARCH bikes:idx "Carbon" FILTER price 0 2000
@@ -537,7 +622,7 @@ FT.SEARCH bikes:idx "%carbin|2%"
 **Objetivo:** Cache com persistência assíncrona  
 **Tempo:** 45 minutos  
 
-Este lab usa aplicação (Redis + PostgreSQL + worker). A parte “direto no MD” é só o setup de containers e DB; a lógica do write-behind continua em código (Python ou outra linguagem) em outro repositório/arquivo. Aqui só os comandos de ambiente.
+Este lab usa aplicação (Redis + PostgreSQL + worker). A parte "direto no MD" é só o setup de containers e DB; a lógica do write-behind continua em código (Python ou outra linguagem) em outro repositório/arquivo. Aqui só os comandos de ambiente.
 
 ---
 
@@ -628,7 +713,7 @@ redis-cli -p 11000 TS.ADD sensor:1:temp 1700000000000 22.5
 redis-cli -p 11000 TS.ADD sensor:1:humidity 1700000000000 65
 ```
 
-Para ingerir 1M pontos sem Python: use um loop PowerShell chamando `TS.ADD` em lote (vários sensores e timestamps). Exemplo mínimo para um sensor:
+Para ingerir 1K pontos sem Python: use um loop PowerShell chamando `TS.ADD` em lote (vários sensores e timestamps). Exemplo mínimo para um sensor:
 
 ```powershell
 $base = [long]((Get-Date -UFormat %s) * 1000); 1..1000 | ForEach-Object { redis-cli -p 11000 TS.ADD sensor:1:temp ($base + $_) (20 + (Get-Random -Minimum -50 -Maximum 50)/10) }
@@ -669,29 +754,25 @@ Para 1M, use um script .ps1 com o mesmo loop e `1..1000000` e cronometre. Espera
 
 *(Mantido como no documento original – apenas desenho e decisões, sem comandos.)*
 
-- Opção A: Pinterest Brasil – Recomendações Real-Time  
-- Opção B: Gaming – Leaderboard Global  
-- Opção C: Chat App – Presença em Tempo Real  
+- **Opção A:** Pinterest Brasil – Recomendações Real-Time  
+- **Opção B:** Gaming – Leaderboard Global  
+- **Opção C:** Chat App – Presença em Tempo Real  
 
 Entregáveis: diagrama, decisões de tech, custo, failover, backup (RTO/RPO). Rubric: escalabilidade, tech choices, security, cost.
 
 ---
 
-## Resumo
+## Resumo de Labs
 
 | Lab | Tema        | Comandos no Windows                          |
 |-----|-------------|----------------------------------------------|
-| 1   | Cluster     | `docker run` por node, `redis-cli`, `Start-Sleep` |
+| 1   | Cluster     | `docker run` por node, `redis-cli`, failover |
 | 2   | M-S         | `docker run` master/slave, `redis-cli`       |
 | 3   | RDB/AOF     | `docker run -v C:\temp\...`, loops PowerShell |
 | 4   | RediSearch  | `redis-cli`, `FT.CREATE`, `FT.SEARCH`, loop PowerShell para dados |
 | 5   | Write-Behind| Docker Redis + Postgres, app em outro repo   |
 | 6   | Time-Series | `TS.CREATE` / `TS.ADD` via redis-cli e PowerShell |
 | 10  | Benchmark   | Loop PowerShell com `redis-cli SET` e cronômetro |
-
-**Preparado por:** Prof. Daniel Lemeszenski  
-**Data:** 27 Fevereiro 2026  
-**Para:** MBA FIAP Encontros 1-3 — versão Windows, sem Python, direto no MD.
 
 ---
 
@@ -706,7 +787,7 @@ Use esta seção ao finalizar os labs ou quando aparecer erro do tipo:
 Parar e remover containers usados nos labs:
 
 ```powershell
-docker rm -f redis-node-0 redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5 redis-master redis-slave redis-rdb redis-aof redis-search redis-ts
+docker rm -f redis-node-0 redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5 redis-master redis-slave redis-rdb redis-aof redis-search redis-ts redis-cache postgres-db redis-ts
 ```
 
 Remover volumes do cluster (apaga estado persistido dos nós):
@@ -740,7 +821,7 @@ docker exec redis-node-5 redis-cli FLUSHALL
 docker exec redis-node-5 redis-cli CLUSTER RESET HARD
 ```
 
-Depois recrie o cluster seguindo a **SEÇÃO 0.3** deste documento.
+Depois recrie o cluster seguindo a **SEÇÃO 0** deste documento.
 
 ### Verificação rápida
 
@@ -751,3 +832,9 @@ docker ps | findstr redis
 ```powershell
 redis-cli -p 6379 cluster info
 ```
+
+---
+
+**Preparado por:** Prof. Daniel Lemeszenski  
+**Data:** 01 Março 2026  
+**Para:** MBA FIAP Encontros 1-3 — versão Windows, sem Python, direto no MD.
