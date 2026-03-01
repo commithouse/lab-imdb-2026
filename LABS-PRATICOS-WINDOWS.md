@@ -74,12 +74,18 @@ Verificar:
 docker ps | findstr redis-node
 ```
 
-### 0.3 Criar cluster (comando correto)
+### 0.3 Criar cluster (em 2 comandos)
 
-Execute no host (PowerShell/CMD):
+Comando 1 (no host, PowerShell/CMD) — entrar no node 0 em modo interativo:
 
 ```powershell
-docker exec redis-node-0 redis-cli --cluster create redis-node-0:6379 redis-node-1:6379 redis-node-2:6379 redis-node-3:6379 redis-node-4:6379 redis-node-5:6379 --cluster-replicas 1
+docker exec -it redis-node-0 sh
+```
+
+Comando 2 (já dentro do container, no prompt `/data #`) — criar o cluster:
+
+```bash
+redis-cli --cluster create redis-node-0:6379 redis-node-1:6379 redis-node-2:6379 redis-node-3:6379 redis-node-4:6379 redis-node-5:6379 --cluster-replicas 1
 ```
 
 Quando pedir confirmação, digite `yes`.
@@ -150,10 +156,18 @@ docker ps | findstr redis-node
 
 **Passo 2: Criar Cluster**
 
-Um único comando (responda **yes** quando pedir confirmação):
+Em 2 comandos (responda **yes** quando pedir confirmação):
+
+Comando 1 (no host):
 
 ```powershell
-docker exec redis-node-0 redis-cli --cluster create redis-node-0:6379 redis-node-1:6379 redis-node-2:6379 redis-node-3:6379 redis-node-4:6379 redis-node-5:6379 --cluster-replicas 1
+docker exec -it redis-node-0 sh
+```
+
+Comando 2 (dentro do container):
+
+```bash
+redis-cli --cluster create redis-node-0:6379 redis-node-1:6379 redis-node-2:6379 redis-node-3:6379 redis-node-4:6379 redis-node-5:6379 --cluster-replicas 1
 ```
 
 ---
@@ -738,7 +752,11 @@ docker exec redis-node-5 redis-cli CLUSTER RESET HARD
 Depois recrie o cluster com:
 
 ```powershell
-docker exec redis-node-0 redis-cli --cluster create 127.0.0.1:6379 127.0.0.1:6380 127.0.0.1:6381 127.0.0.1:6382 127.0.0.1:6383 127.0.0.1:6384 --cluster-replicas 1
+docker exec -it redis-node-0 sh
+```
+
+```bash
+redis-cli --cluster create redis-node-0:6379 redis-node-1:6379 redis-node-2:6379 redis-node-3:6379 redis-node-4:6379 redis-node-5:6379 --cluster-replicas 1
 ```
 
 ### Verificação rápida
